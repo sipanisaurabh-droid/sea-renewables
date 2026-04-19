@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEA Renewables Intelligence</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #020817;
+    color: #E2E8F0;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Header */
+  .header {
+    background: linear-gradient(180deg, rgba(16,185,129,0.1) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 22px 18px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+  .header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 19px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #10B981, #3B82F6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 3px;
+  }
+
+  /* Refresh button */
+  .btn-refresh {
+    background: linear-gradient(135deg, #10B981, #059669);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+  /* Main content */
+  .main { max-width: 960px; margin: 0 auto; padding: 18px 14px 0; }
+
+  /* Banner */
+  .banner {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 1.7;
+  }
+  .banner-label { color: #F59E0B; font-weight: 600; }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .stat-pill {
+    background: rgba(15,23,42,0.7);
+    border-radius: 8px;
+    padding: 9px 0;
+    text-align: center;
+  }
+  .stat-val { font-size: 18px; font-weight: 700; }
+  .stat-label { font-size: 9px; color: #64748B; letter-spacing: 0.06em; }
+
+  /* Filters */
+  .filters { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 7px; }
+  .filter-btn {
+    border: none;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .cat-filters { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+  .cat-btn {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10.5px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  /* Status line */
+  .status-line { font-size: 10px; color: #334155; margin-bottom: 12px; }
+  .dot { color: #10B981; }
+
+  /* Spinner */
+  .spinner-wrap { text-align: center; padding: 48px 0; color: #475569; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid #1e293b;
+    border-top: 3px solid #10B981;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  /* Cards grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 9px;
+  }
+
+  /* Card */
+  .card {
+    background: rgba(15,23,42,0.8);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 14px 15px;
+    cursor: pointer;
+    animation: fadeIn 0.35s ease both;
+    transition: background 0.15s;
+  }
+  .card:hover { background: rgba(30,41,59,0.9); }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 7px;
+    gap: 8px;
+  }
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  .cat-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .country-label { font-size: 10.5px; color: #64748B; }
+  .tag-badge {
+    background: rgba(255,255,255,0.04);
+    color: #64748B;
+    font-size: 9.5px;
+    padding: 2px 6px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .time-label { font-size: 9.5px; color: #475569; flex-shrink: 0; }
+
+  .card-headline { display: flex; align-items: flex-start; gap: 6px; }
+  .sent-dot { width: 7px; height: 7px; min-width: 7px; border-radius: 50%; display: inline-block; margin-top: 4px; }
+  .headline-text { font-size: 13px; font-weight: 600; color: #E2E8F0; line-height: 1.45; }
+
+  .card-body {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: none;
+  }
+  .card-body.open { display: block; }
+  .summary-text { font-size: 12px; color: #94A3B8; line-height: 1.65; margin-bottom: 8px; }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .source-label { font-size: 10.5px; color: #475569; }
+  .read-link { font-size: 10.5px; color: #3B82F6; text-decoration: none; }
+
+  /* Empty */
+  .empty { text-align: center; padding: 48px 0; color: #475569; font-size: 13px; }
+
+  /* Page footer */
+  .page-footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    text-align: center;
+    font-size: 10px;
+    color: #1e293b;
+  }
+
+  @media (max-width: 600px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .header-title { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-title">⚡ SEA Renewables Intelligence</div>
+      <div class="header-sub" id="header-sub">Loading…</div>
+    </div>
+    <button class="btn-refresh" id="refresh-btn" onclick="loadNews()">
+      <span id="refresh-icon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Banner -->
+  <div class="banner" id="banner" style="display:none">
+    <span class="banner-label">⚠ </span><span id="banner-msg"></span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-pill" style="border:1px solid rgba(59,130,246,0.2)">
+      <div class="stat-val" style="color:#3B82F6" id="stat-total">—</div>
+      <div class="stat-label">STORIES</div>
+    </div>
+    <div class="stat-pill" style="border:1px solid rgba(16,185,129,0.2)">
+      <div class="stat-val" style="color:#10B981" id="stat-pos">—</div>
+      <div class="stat-label">BULLISH</div>
+    </div>
+    <div class="stat-pill" style="border:1px solid rgba(239,68,68,0.2)">
+      <div class="stat-val" style="color:#EF4444" id="stat-neg">—</div>
+      <div class="stat-label">BEARISH</div>
+    </div>
+    <div class="stat-pill" style="border:1px solid rgba(148,163,184,0.2)">
+      <div class="stat-val" style="color:#94A3B8" id="stat-neu">—</div>
+      <div class="stat-label">NEUTRAL</div>
+    </div>
+  </div>
+
+  <!-- Country filters -->
+  <div class="filters" id="country-filters"></div>
+
+  <!-- Category filters -->
+  <div class="cat-filters" id="cat-filters"></div>
+
+  <!-- Status -->
+  <div class="status-line" id="status-line"></div>
+
+  <!-- Cards -->
+  <div id="cards-area"></div>
+
+  <div class="page-footer">Live market intelligence · Not financial advice · For professional use</div>
+</div>
+
+<script>
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxz09_qagvFMoLnzuIIB7m93XhUZHvqWB_nmDr_ELbR9DfWTA4xE9KPZzeDhNqFLaUEIRSPNTv0gg2/pub?gid=232900869&single=true&output=csv";
+
+const COUNTRIES = ["All","Malaysia","Singapore","Philippines","Indonesia","Vietnam","Thailand","Japan","Korea"];
+const CATEGORIES = ["All","Solar","Wind","BESS","Policy & Regulation","M&A","Finance","Grid & Infra","Data Centres"];
+const CAT_COLORS = { "Solar":"#F59E0B","Wind":"#3B82F6","BESS":"#10B981","Policy & Regulation":"#8B5CF6","M&A":"#EF4444","Finance":"#06B6D4","Grid & Infra":"#F97316","Data Centres":"#EC4899" };
+const FLAGS = { "Malaysia":"🇲🇾","Singapore":"🇸🇬","Philippines":"🇵🇭","Indonesia":"🇮🇩","Vietnam":"🇻🇳","Thailand":"🇹🇭","Japan":"🇯🇵","Korea":"🇰🇷" };
+const SENT_COLORS = { positive:"#10B981", negative:"#EF4444", neutral:"#94A3B8" };
+
+const FALLBACK = [
+  { headline:"TNB Awards 500MW CRESS-2 Solar Contracts Across Peninsular Malaysia", summary:"Tenaga Nasional Berhad has awarded five separate CRESS-2 power purchase agreements totalling 500MW to bidders including Solarvest Holdings, Gentari, and YTL Power at tariffs ranging from RM0.2190 to RM0.2380/kWh. All plants are expected to achieve COD by Q4 2027.", country:"Malaysia", category:"Solar", source:"Energy Commission Malaysia", timeAgo:"3 hours ago", sentiment:"positive", tag:"CRESS", url:"" },
+  { headline:"Sarawak Energy Secures USD 1.2bn Green Loan for 1.2GW Hydro Expansion", summary:"Sarawak Energy Berhad has closed a USD 1.2 billion sustainability-linked loan with a consortium of eight international banks to fund the Baleh hydroelectric project targeted for commissioning in 2028.", country:"Malaysia", category:"Finance", source:"Sarawak Energy Berhad", timeAgo:"5 hours ago", sentiment:"positive", tag:"Finance", url:"" },
+  { headline:"ACEN Philippines Commissions 160MW/640MWh BESS at Batangas Grid Node", summary:"AC Energy Philippines has commissioned a 160MW/640MWh battery energy storage system at its Batangas facility, the largest utility-scale BESS in Southeast Asia. Total capex was approximately USD 145 million.", country:"Philippines", category:"BESS", source:"ACEN Corporation", timeAgo:"Today", sentiment:"positive", tag:"BESS", url:"" },
+  { headline:"Vietnam Delays DPPA Rollout as Ministry Seeks Pricing Clarity", summary:"Vietnam's Ministry of Industry and Trade has pushed back the Direct Power Purchase Agreement commercial launch to Q3 2026, citing unresolved questions around transmission wheeling charges for industrial offtakers.", country:"Vietnam", category:"Policy & Regulation", source:"Vietnam MOIT", timeAgo:"6 hours ago", sentiment:"negative", tag:"Policy", url:"" },
+  { headline:"Singapore EMA Launches RFP for 2GW Offshore Wind by 2030", summary:"The Energy Market Authority has issued a formal RFP for up to 2GW of offshore wind capacity through competitive tender, targeting first power by 2030 under the Low Carbon Energy Import framework.", country:"Singapore", category:"Wind", source:"Energy Market Authority", timeAgo:"Yesterday", sentiment:"positive", tag:"Wind", url:"" },
+  { headline:"Johor-Singapore SEZ Attracts USD 8bn in Data Centre RE Commitments", summary:"The Johor-Singapore Special Economic Zone Authority has confirmed USD 8 billion in committed renewable energy-linked data centre investments from Microsoft, Google and two undisclosed Asian conglomerates.", country:"Malaysia", category:"Data Centres", source:"JS-SEZ Authority", timeAgo:"Today", sentiment:"positive", tag:"FDI", url:"" },
+  { headline:"Indonesia Revises Renewable FIT Downward, Developers Express Concern", summary:"Indonesia's Ministry of Energy has published revised FIT schedules reducing reference tariffs by 8-12% versus 2023, citing declining equipment costs. Developers argue cuts ignore higher local content requirements.", country:"Indonesia", category:"Policy & Regulation", source:"Indonesia MEMR", timeAgo:"Yesterday", sentiment:"negative", tag:"Policy", url:"" },
+  { headline:"Gulf Energy Wins 600MW Solar + 200MW BESS Tender in Thailand", summary:"Gulf Energy Development has been awarded Thailand's largest-ever hybrid renewable tender comprising 600MW solar paired with 200MW/800MWh battery storage under a 25-year PPA with EGAT at THB 2.38/kWh.", country:"Thailand", category:"BESS", source:"EGAT Thailand", timeAgo:"3 hours ago", sentiment:"positive", tag:"Hybrid", url:"" },
+];
+
+let allNews = [];
+let activeCountry = "All";
+let activeCategory = "All";
+let expandedIndex = null;
+
+// ── CSV Parser ──────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map(h => h.replace(/"/g,"").trim());
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === "," && !inQ) { cols.push(cur); cur = ""; }
+      else { cur += ch; }
+    }
+    cols.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (cols[i] || "").trim(); });
+    return obj;
+  }).filter(r => r.headline && r.headline !== "headline");
+}
+
+// ── Fetch news from Sheet ───────────────────────────────────
+async function loadNews() {
+  setLoading(true);
+  showBanner(false);
+
+  try {
+    const res = await fetch(SHEET_CSV_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    const parsed = parseCSV(text);
+
+    if (parsed.length > 0) {
+      allNews = parsed;
+      setHeaderSub("🟢 Live data · Updated " + now());
+    } else {
+      allNews = FALLBACK;
+      showBanner(true, "Sheet is empty — run the Apps Script to populate it, then refresh.");
+      setHeaderSub("⚠️ Sample data");
+    }
+  } catch(e) {
+    allNews = FALLBACK;
+    showBanner(true, "Could not reach Google Sheet (" + e.message + "). Make sure the sheet is published publicly. Showing sample data.");
+    setHeaderSub("⚠️ Sample data");
+  }
+
+  setLoading(false);
+  expandedIndex = null;
+  render();
+}
+
+// ── Render cards ────────────────────────────────────────────
+function render() {
+  const filtered = allNews.filter(n => {
+    const mc = activeCountry === "All" || n.country === activeCountry;
+    const mcat = activeCategory === "All" || n.category === activeCategory;
+    return mc && mcat;
+  });
+
+  const pos = filtered.filter(n => n.sentiment === "positive").length;
+  const neg = filtered.filter(n => n.sentiment === "negative").length;
+  const neu = filtered.filter(n => n.sentiment === "neutral").length;
+
+  document.getElementById("stat-total").textContent = filtered.length;
+  document.getElementById("stat-pos").textContent = pos;
+  document.getElementById("stat-neg").textContent = neg;
+  document.getElementById("stat-neu").textContent = neu;
+  document.getElementById("status-line").innerHTML = filtered.length > 0
+    ? '<span class="dot">●</span> ' + filtered.length + ' stories · Click any card to expand'
+    : '';
+
+  const area = document.getElementById("cards-area");
+
+  if (filtered.length === 0) {
+    area.innerHTML = '<div class="empty">No stories match this filter.</div>';
+    return;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "cards-grid";
+
+  filtered.forEach((item, i) => {
+    const col = CAT_COLORS[item.category] || "#94A3B8";
+    const sentCol = SENT_COLORS[item.sentiment] || "#94A3B8";
+    const isOpen = expandedIndex === i;
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.borderLeft = "3px solid " + col;
+    card.style.animationDelay = (i * 40) + "ms";
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="card-tags">
+          <span class="cat-badge" style="background:${col}22;color:${col}">${item.category}</span>
+          <span class="country-label">${FLAGS[item.country] || "🌏"} ${item.country}</span>
+          ${item.tag ? `<span class="tag-badge">${item.tag}</span>` : ""}
+        </div>
+        <span class="time-label">${item.timeAgo}</span>
+      </div>
+      <div class="card-headline">
+        <span class="sent-dot" style="background:${sentCol}"></span>
+        <div class="headline-text">${item.headline}</div>
+      </div>
+      <div class="card-body ${isOpen ? "open" : ""}">
+        <div class="summary-text">${item.summary}</div>
+        <div class="card-footer">
+          <span class="source-label">Source: ${item.source}</span>
+          ${item.url ? `<a class="read-link" href="${item.url}" target="_blank" rel="noreferrer">Read full story →</a>` : ""}
+        </div>
+      </div>
+    `;
+
+    card.addEventListener("click", () => {
+      expandedIndex = isOpen ? null : i;
+      render();
+    });
+
+    grid.appendChild(card);
+  });
+
+  area.innerHTML = "";
+  area.appendChild(grid);
+}
+
+// ── Build filter buttons ────────────────────────────────────
+function buildFilters() {
+  const cf = document.getElementById("country-filters");
+  COUNTRIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "filter-btn";
+    btn.textContent = (FLAGS[c] || "") + " " + c;
+    btn.onclick = () => { activeCountry = c; expandedIndex = null; updateCountryButtons(); render(); };
+    cf.appendChild(btn);
+  });
+
+  const catf = document.getElementById("cat-filters");
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "cat-btn";
+    btn.textContent = cat;
+    btn.dataset.cat = cat;
+    btn.onclick = () => { activeCategory = cat; expandedIndex = null; updateCatButtons(); render(); };
+    catf.appendChild(btn);
+  });
+
+  updateCountryButtons();
+  updateCatButtons();
+}
+
+function updateCountryButtons() {
+  document.querySelectorAll("#country-filters .filter-btn").forEach((btn, i) => {
+    const c = COUNTRIES[i];
+    if (c === activeCountry) {
+      btn.style.background = "linear-gradient(135deg,#10B981,#059669)";
+      btn.style.color = "white";
+      btn.style.border = "none";
+      btn.style.fontWeight = "600";
+    } else {
+      btn.style.background = "rgba(15,23,42,0.7)";
+      btn.style.color = "#94A3B8";
+      btn.style.border = "1px solid rgba(255,255,255,0.09)";
+      btn.style.fontWeight = "400";
+    }
+  });
+}
+
+function updateCatButtons() {
+  document.querySelectorAll("#cat-filters .cat-btn").forEach(btn => {
+    const cat = btn.dataset.cat;
+    const col = CAT_COLORS[cat] || "#3B82F6";
+    if (cat === activeCategory) {
+      btn.style.background = col + "22";
+      btn.style.border = "1px solid " + col;
+      btn.style.color = col;
+      btn.style.fontWeight = "600";
+    } else {
+      btn.style.background = "rgba(15,23,42,0.5)";
+      btn.style.border = "1px solid rgba(255,255,255,0.07)";
+      btn.style.color = "#64748B";
+      btn.style.fontWeight = "400";
+    }
+  });
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+function setLoading(on) {
+  const btn = document.getElementById("refresh-btn");
+  const icon = document.getElementById("refresh-icon");
+  btn.disabled = on;
+  icon.className = on ? "spin" : "";
+  icon.textContent = "↻";
+  if (on) {
+    document.getElementById("cards-area").innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div>Fetching live news…</div></div>';
+  }
+}
+
+function setHeaderSub(msg) {
+  const d = new Date();
+  const dateStr = d.toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  document.getElementById("header-sub").textContent = dateStr + " · " + msg;
+}
+
+function showBanner(show, msg) {
+  const el = document.getElementById("banner");
+  el.style.display = show ? "block" : "none";
+  if (msg) document.getElementById("banner-msg").textContent = msg;
+}
+
+function now() {
+  return new Date().toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+}
+
+// ── Init ────────────────────────────────────────────────────
+buildFilters();
+loadNews();
+</script>
+</body>
+</html>
