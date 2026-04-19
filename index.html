@@ -186,8 +186,8 @@
   .time-label { font-size: 9.5px; color: #475569; flex-shrink: 0; }
 
   .card-headline { display: flex; align-items: flex-start; gap: 6px; }
-  .sent-dot { width: 7px; height: 7px; min-width: 7px; border-radius: 50%; display: inline-block; margin-top: 4px; }
-  .headline-text { font-size: 13px; font-weight: 600; color: #E2E8F0; line-height: 1.45; }
+  .sent-dot { width: 7px; height: 7px; min-width: 7px; border-radius: 50%; display: inline-block; margin-top: 4px; flex-shrink: 0; }
+  .headline-text { font-size: 13px; font-weight: 600; color: #E2E8F0; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; }
 
   .card-body {
     margin-top: 10px;
@@ -196,7 +196,7 @@
     display: none;
   }
   .card-body.open { display: block; }
-  .summary-text { font-size: 12px; color: #94A3B8; line-height: 1.65; margin-bottom: 8px; }
+  .summary-text { font-size: 12px; color: #94A3B8; line-height: 1.65; margin-bottom: 8px; word-break: break-word; overflow-wrap: break-word; }
   .card-footer { display: flex; justify-content: space-between; align-items: center; }
   .source-label { font-size: 10.5px; color: #475569; }
   .read-link { font-size: 10.5px; color: #3B82F6; text-decoration: none; }
@@ -280,6 +280,15 @@
 <script>
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxz09_qagvFMoLnzuIIB7m93XhUZHvqWB_nmDr_ELbR9DfWTA4xE9KPZzeDhNqFLaUEIRSPNTv0gg2/pub?gid=232900869&single=true&output=csv";
 
+// Escape HTML to prevent injection and rendering glitches
+function esc(str) {
+  return String(str || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
 const COUNTRIES = ["All","Malaysia","Singapore","Philippines","Indonesia","Vietnam","Thailand","Japan","Korea"];
 const CATEGORIES = ["All","Solar","Wind","BESS","Policy & Regulation","M&A","Finance","Grid & Infra","Data Centres"];
 const CAT_COLORS = { "Solar":"#F59E0B","Wind":"#3B82F6","BESS":"#10B981","Policy & Regulation":"#8B5CF6","M&A":"#EF4444","Finance":"#06B6D4","Grid & Infra":"#F97316","Data Centres":"#EC4899" };
@@ -303,24 +312,51 @@ let activeCategory = "All";
 let expandedIndex = null;
 
 // ── CSV Parser ──────────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.trim().split("\n");
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map(h => h.replace(/"/g,"").trim());
-  return lines.slice(1).map(line => {
-    const cols = [];
-    let cur = "", inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === "," && !inQ) { cols.push(cur); cur = ""; }
-      else { cur += ch; }
+function parseLine(line) {
+  const cols = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; } // escaped quote ""
+      else { inQ = !inQ; }
+    } else if (ch === "," && !inQ) {
+      cols.push(cur); cur = "";
+    } else {
+      cur += ch;
     }
-    cols.push(cur);
+  }
+  cols.push(cur);
+  return cols.map(c => c.trim());
+}
+
+function parseCSV(text) {
+  // Normalise Windows/Mac line endings
+  const lines = text.trim().replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length < 2) return [];
+  const headers = parseLine(lines[0]);
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseLine(lines[i]);
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = (cols[i] || "").trim(); });
-    return obj;
-  }).filter(r => r.headline && r.headline !== "headline");
+    headers.forEach((h, j) => { obj[h] = (cols[j] || "").trim(); });
+    rows.push(obj);
+  }
+
+  return rows.filter(r => {
+    if (!r.headline || r.headline === "headline") return false;
+    // Remove non-English: Chinese, Japanese, Korean characters
+    if (/[\u3000-\u9fff\uac00-\ud7af]/.test(r.headline)) return false;
+    // Remove rows where CSV parsing broke and URL leaked into headline
+    if (r.headline.includes("http") || r.headline.includes("www.")) return false;
+    // Remove placeholder/junk titles
+    if (r.headline === "more..." || r.headline.includes("[Removed]")) return false;
+    // Remove suspiciously short headlines
+    if (r.headline.length < 20) return false;
+    return true;
+  });
 }
 
 // ── Fetch news from Sheet ───────────────────────────────────
@@ -388,6 +424,16 @@ function render() {
     const sentCol = SENT_COLORS[item.sentiment] || "#94A3B8";
     const isOpen = expandedIndex === i;
 
+    // Sanitise and truncate
+    const headline = esc(item.headline).slice(0, 160);
+    const summary = esc(item.summary).slice(0, 400);
+    const source = esc(item.source || "Unknown");
+    const country = esc(item.country || "SEA");
+    const category = esc(item.category || "News");
+    const tag = item.tag ? esc(item.tag) : "";
+    const timeAgo = esc(item.timeAgo || "");
+    const url = (item.url || "").replace(/"/g, "");
+
     const card = document.createElement("div");
     card.className = "card";
     card.style.borderLeft = "3px solid " + col;
@@ -396,21 +442,21 @@ function render() {
     card.innerHTML = `
       <div class="card-top">
         <div class="card-tags">
-          <span class="cat-badge" style="background:${col}22;color:${col}">${item.category}</span>
-          <span class="country-label">${FLAGS[item.country] || "🌏"} ${item.country}</span>
-          ${item.tag ? `<span class="tag-badge">${item.tag}</span>` : ""}
+          <span class="cat-badge" style="background:${col}22;color:${col}">${category}</span>
+          <span class="country-label">${FLAGS[country] || "🌏"} ${country}</span>
+          ${tag ? `<span class="tag-badge">${tag}</span>` : ""}
         </div>
-        <span class="time-label">${item.timeAgo}</span>
+        <span class="time-label">${timeAgo}</span>
       </div>
       <div class="card-headline">
         <span class="sent-dot" style="background:${sentCol}"></span>
-        <div class="headline-text">${item.headline}</div>
+        <div class="headline-text">${headline}</div>
       </div>
       <div class="card-body ${isOpen ? "open" : ""}">
-        <div class="summary-text">${item.summary}</div>
+        <div class="summary-text">${summary}</div>
         <div class="card-footer">
-          <span class="source-label">Source: ${item.source}</span>
-          ${item.url ? `<a class="read-link" href="${item.url}" target="_blank" rel="noreferrer">Read full story →</a>` : ""}
+          <span class="source-label">Source: ${source}</span>
+          ${url ? `<a class="read-link" href="${url}" target="_blank" rel="noreferrer">Read full story →</a>` : ""}
         </div>
       </div>
     `;
